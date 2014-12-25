@@ -114,10 +114,10 @@ fn test_token_iterator() {
     );
 }
 
-fn eval<'a, I: Iterator<Token<'a>>>(tokens: &mut I) -> Option<int> {
+fn eval<'a, I: Iterator<Token<'a>>>(mut tokens: I) -> Option<int> {
     let mut stack = Vec::<int>::new();
 
-    for token in *tokens {
+    for token in tokens {
         match token {
             Token::Number(n) => stack.push(n),
 
@@ -138,12 +138,17 @@ fn eval<'a, I: Iterator<Token<'a>>>(tokens: &mut I) -> Option<int> {
 fn test_eval() {
     assert_eq!(
         eval(
-            &mut vec!(
+            vec!(
                 Token::Number(1234),
                 Token::Number(4321),
                 Token::Plus,
             ).into_iter()
         ).unwrap(),
+        5555
+    );
+
+    assert_eq!(
+        eval(TokenIterator(" 1234 4321+")).unwrap(),
         5555
     );
 }
