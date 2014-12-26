@@ -114,22 +114,43 @@ fn test_token_iterator() {
     );
 }
 
-fn eval<'a, I: Iterator<Token<'a>>>(mut tokens: I) -> Option<int> {
-    let mut stack = Vec::<int>::new();
+#[deriving(Show, PartialEq, Eq)]
+enum EvalOperation {
+    Addition,
+    Subtraction,
+    Multiplication,
+    Division,
+}
+
+#[deriving(Show, PartialEq, Eq)]
+enum EvalError {
+    Empty,
+    MissingOperand(EvalOperation, Option<int>),
+    MissingOperator(Box<Vec<int>>),
+}
+
+fn eval<'a, I: Iterator<Token<'a>>>(mut tokens: I) -> Result<int, EvalError> {
+    let mut stack = box Vec::<int>::new();
 
     for token in tokens {
         match token {
             Token::Number(n) => stack.push(n),
 
             Token::Plus => {
-                let result = stack.pop()
-                    .and_then(|n1| stack.pop().map(|n2| (n1, n2)))
+                let n1_opt = stack.pop();
+                let n2_opt = stack.pop();
+
+                let result = n1_opt
+                    .and_then(|n1| n2_opt.map(|n2| (n1, n2)))
                     .map(|(n1, n2)| n1 + n2);
 
                 if let Some(x) = result {
                     stack.push(x);
                 } else {
-                    return None;
+                    return Err(EvalError::MissingOperand(
+                        EvalOperation::Addition,
+                        n1_opt,
+                    ));
                 }
             },
 
@@ -137,7 +158,11 @@ fn eval<'a, I: Iterator<Token<'a>>>(mut tokens: I) -> Option<int> {
         }
     }
 
-    return stack.pop();
+    if stack.len() > 1 {
+        return Err(EvalError::MissingOperator(stack));
+    }
+
+    return stack.pop().ok_or(EvalError::Empty);
 }
 
 #[test]
@@ -162,8 +187,18 @@ fn test_eval() {
 #[test]
 fn test_eval_failure() {
     assert_eq!(
-        eval(TokenIterator("1234 +")),
-        None
+        eval(TokenIterator("1234 +")).unwrap_err(),
+        EvalError::MissingOperand(EvalOperation::Addition, Some(1234))
+    );
+
+    assert_eq!(
+        eval(TokenIterator(" +   ")).unwrap_err(),
+        EvalError::MissingOperand(EvalOperation::Addition, None)
+    );
+
+    assert_eq!(
+        eval(TokenIterator("1234 1234 4321 +")).unwrap_err(),
+        EvalError::MissingOperator(box vec!(1234i, 5555))
     );
 }
 
