@@ -130,29 +130,39 @@ enum EvalError {
 }
 
 fn eval<'a, I: Iterator<Token<'a>>>(mut tokens: I) -> Result<int, EvalError> {
+    fn binary_operation<F: Fn(int, int) -> int>(stack: &mut Vec<int>, op: EvalOperation, func: F) -> Result<(), EvalError> {
+        let n1_opt = stack.pop();
+        let n2_opt = stack.pop();
+
+        let result = n1_opt
+            .and_then(|n1| n2_opt.map(|n2| (n1, n2)))
+            .map(|(n1, n2)| func(n1, n2));
+
+        if let Some(x) = result {
+            stack.push(x);
+            return Ok(());
+        } else {
+            return Err(EvalError::MissingOperand(op, n1_opt));
+        }
+    }
+
     let mut stack = box Vec::<int>::new();
 
     for token in tokens {
         match token {
             Token::Number(n) => stack.push(n),
 
-            Token::Plus => {
-                let n1_opt = stack.pop();
-                let n2_opt = stack.pop();
+            Token::Plus => try!(binary_operation(
+                &mut *stack,
+                EvalOperation::Addition,
+                |n1, n2| n2 + n1
+            )),
 
-                let result = n1_opt
-                    .and_then(|n1| n2_opt.map(|n2| (n1, n2)))
-                    .map(|(n1, n2)| n1 + n2);
-
-                if let Some(x) = result {
-                    stack.push(x);
-                } else {
-                    return Err(EvalError::MissingOperand(
-                        EvalOperation::Addition,
-                        n1_opt,
-                    ));
-                }
-            },
+            Token::Minus => try!(binary_operation(
+                &mut *stack,
+                EvalOperation::Subtraction,
+                |n1, n2| n2 - n1
+            )),
 
             _ => {},
         }
@@ -199,6 +209,22 @@ fn test_eval_failure() {
     assert_eq!(
         eval(TokenIterator("1234 1234 4321 +")).unwrap_err(),
         EvalError::MissingOperator(box vec!(1234i, 5555))
+    );
+}
+
+#[test]
+fn test_addition() {
+    assert_eq!(
+        eval(TokenIterator("1234 4321 + 4444 +")).unwrap(),
+        9999
+    );
+}
+
+#[test]
+fn test_subtraction() {
+    assert_eq!(
+        eval(TokenIterator("1234 100 -")).unwrap(),
+        1134
     );
 }
 
