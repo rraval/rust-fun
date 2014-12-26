@@ -122,9 +122,15 @@ fn eval<'a, I: Iterator<Token<'a>>>(mut tokens: I) -> Option<int> {
             Token::Number(n) => stack.push(n),
 
             Token::Plus => {
-                let n1 = stack.pop().unwrap();
-                let n2 = stack.pop().unwrap();
-                stack.push(n1 + n2);
+                let result = stack.pop()
+                    .and_then(|n1| stack.pop().map(|n2| (n1, n2)))
+                    .map(|(n1, n2)| n1 + n2);
+
+                if let Some(x) = result {
+                    stack.push(x);
+                } else {
+                    return None;
+                }
             },
 
             _ => {},
@@ -150,6 +156,14 @@ fn test_eval() {
     assert_eq!(
         eval(TokenIterator(" 1234 4321+")).unwrap(),
         5555
+    );
+}
+
+#[test]
+fn test_eval_failure() {
+    assert_eq!(
+        eval(TokenIterator("1234 +")),
+        None
     );
 }
 
