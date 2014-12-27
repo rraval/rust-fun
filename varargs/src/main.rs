@@ -1,26 +1,27 @@
 extern crate libc;
 
-use libc::{c_int, c_void};
+use libc::{c_uint, c_char, c_void};
+use std::c_str::CString;
+use std::mem::{uninitialized};
 
 type VarArgList = *mut c_void;
 
-extern fn rust_variadic(num: c_int, va_list: VarArgList) {
+extern fn rust_variadic(fmt: *const c_char, va_list: VarArgList) {
     unsafe {
-        println!("got {} args", num);
+        let mut buf = uninitialized::<[c_char, ..128]>();
 
-        for _ in range(0, num) {
-            println!("{}", va_arg_int(va_list));
-        }
+        vsnprintf(buf.as_mut_ptr(), 128, fmt, va_list);
+        println!("{}", CString::new(buf.as_ptr(), false));
     }
 }
 
 extern {
-    fn callme(cb: unsafe extern fn(c_int, ...));
+    fn callme(cb: unsafe extern fn(*const c_char, ...));
 
-    fn set_shim_callback(cb: extern fn(c_int, VarArgList));
-    fn shim(num: c_int, ...);
+    fn set_shim_callback(cb: extern fn(*const c_char, VarArgList));
+    fn shim(num: *const c_char, ...);
 
-    fn va_arg_int(va_list: VarArgList) -> c_int;
+    fn vsnprintf(buf: *mut c_char, size: c_uint, fmt: *const c_char, va_list: VarArgList);
 }
 
 fn main() {

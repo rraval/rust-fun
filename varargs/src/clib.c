@@ -1,25 +1,21 @@
 #include <stdarg.h>
 
-typedef void (*callback_t)(int num, void *varargs);
+typedef void (*callback_t)(const char *fmt, void *varargs);
 
 static callback_t shim_callback;
 void set_shim_callback(callback_t cb) {
     shim_callback = cb;
 }
 
-void shim(int num, ...) {
+void shim(const char *fmt, ...) {
     va_list varargs;
-    va_start(varargs, num);
+    va_start(varargs, fmt);
 
-    shim_callback(num, &varargs);
+    shim_callback(fmt, varargs);
 
     va_end(varargs);
 }
 
-int va_arg_int(va_list *varargs) {
-    return va_arg(*varargs, int);
-}
-
-void callme(void (*cb)(int, ...)) {
-    cb(3, 13, 42, 57);
+void callme(void (*cb)(const char *, ...)) {
+    cb("fmt %s with num %4d", "foo", 14);
 }
