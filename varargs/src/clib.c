@@ -16,8 +16,8 @@ void shim(int num, ...) {
     va_end(varargs);
 }
 
-void va_arg_int(va_list *varargs, int *arg) {
-    *arg = va_arg(*varargs, int);
+int va_arg_int(va_list *varargs) {
+    return va_arg(*varargs, int);
 }
 
 void callme(void (*cb)(int, ...)) {
