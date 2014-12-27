@@ -1,0 +1,6 @@
+[package]
+
+name = "clib"
+version = "0.0.1"
+authors = ["Ronuk Raval <ronuk.raval@gmail.com>"]
+build = "build.rs"
